@@ -1,0 +1,9 @@
+namespace CX4.Crawler.TaoBao
+{
+    /// <summary>
+    /// 淘宝爬虫抽象类
+    /// </summary>
+    public abstract class TaoBaoCrawler : BaseCrawler
+    {
+    }
+}
