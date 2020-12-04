@@ -1,0 +1,32 @@
+namespace CX4.Crawler.JingDong
+{
+    /// <summary>
+    /// 京东PC端爬虫基类
+    /// </summary>
+    public abstract class JDPCCrawler : JDCrawler
+    {
+        #region override
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected override string UserAgent => "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36";
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected override string Accept => "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected override string Referer => "https://item.jd.com/";
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected override string Cookie => "Hm_lvt_407473d433e871de861cf818aa1405a1=1575455132,1575455385,1575455841,1575455911; __jdu=1599721123327385033698; shshshfpb=1823bc91e2c734a1199ba3ac47c5e438521064a1438afb9a25b30b9ffb; shshshfpa=3778ddd5-99a1-8d09-e24c-b70bb8cddf55-1596789642; pinId=0okww1qFdaLLSG7SZCDxOQ; unick=Libra_skydsss; _tp=pe68Z5s49cpjIVpdSE0pIGS2Odh7vozv5alfild0%2FjE%3D; _pst=%E5%BD%AD%E4%B8%9C%E4%B8%9C; qrsc=3; pin=%E5%BD%AD%E4%B8%9C%E4%B8%9C; ipLocation=%u5e7f%u4e1c; unpl=V2_ZzNtbRIFQRJ9WhUBekkOBmIEFgoSVkcRJQ9GB3kQWAJvVBtZclRCFnQURlRnGVwUZgsZWEJcRxxFCENkexhdBWMGEV5EVnMlMEsWBi8FXAdmCxRVQVFCE30JTld9EVoAYjMRXXJWcxVxAE5SeBlcBmUBEVtAXkcUdwpBXHIpbAVvByJeRVRDEnMBT1Z4GWzTyZfH1f2O87CjouiB9qmJjMzXrNtyV0oVdwBHVXseXzVmMxNtAzlEEXwPTlc2GVgNbwURXUJUQRd2DkRdfxheB2ALG21DZ0A%3d; cn=50; rkv=1.0; ceshi3.com=203; __jdv=76161171|direct|-|none|-|1606214680433; areaId=19; ipLoc-djd=19-1607-3639-0; PCSYCityID=CN_440000_440300_440304; mt_xid=V2_52007VwMWWlVeUVofShteBmEBG1ZcWlBdF0ApXVFvVxsCCA9OXUwdGkAAbgUaTg1ZAVIDTEsJBGAKFgUJD1QJL0oYXwR7AxJOXl5DWh5CHFQOYwEiUG1YYlMXTBhfA2MCFlVZXlNcF0gcWgBXAxFRXw%3D%3D; TrackID=1lfOLEfffLk3cU7sz0ycIiZWnFeSHI_V1mb5s_I0F9OYQQIlvDkLcV3zPQs74Zd_EZvsI4xE4tHVGMQX7XvdE08XX58G4dTAJEAzLmWA49aU; __jda=76161171.1599721123327385033698.1599721123.1606695987.1606716740.144; __jdc=76161171; user-key=e23fbb39-4c6e-4527-bfc4-8568d94bf253; shshshfp=08778ee646cf60f7049c6e3de7a9a1fe; 3AB9D23F7A4B3C9B=XVSWFWJ53AHOY6YTI5MZEZTSTIKD3MPGQOL7AORD7CPLUZ2DJQFWX4EHEZOMAWZO7GCHZLEG7HM43GLDR4QQEPAY24; JSESSIONID=ACBAB1CFF1E06E72E98B03E6EF3477EC.s1; thor=16AF2818CA51C164C44DD19AE58E0D9A741E568EEC04C38B37A174FC9DA4C3D8E7EA83702178113C92F27AAF35DD62C0E1D55EF54296629363EF50BD776B48EEE1C73688BE452D5D48BB679AB9E7BC5E0E901DC9C870790E3A6CA8211BA4383D97B516AE856B38C345BF0CD67CADCF0F60A628F369F28BCAB343C842BEE88DBB";
+
+        #endregion
+    }
+}
