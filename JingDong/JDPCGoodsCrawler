@@ -1,0 +1,500 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+using CX4.Crawler.Models;
+
+using HtmlAgilityPack;
+
+namespace CX4.Crawler.JingDong
+{
+    /// <summary>
+    /// 京东PC端商品爬虫类
+    /// </summary>
+    public class JDPCGoodsCrawler : JDPCCrawler
+    {
+        #region private
+        private readonly string _goodsUrl;
+        private readonly string _html;
+        private readonly HtmlDocument _doc;
+        #endregion
+
+        #region 构造函数
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="goodsUrl"></param>
+        public JDPCGoodsCrawler(string goodsUrl)
+        {
+            _goodsUrl = goodsUrl;
+            _html = HttpGet(goodsUrl);
+            _doc = BuildHtmlDocument(_html);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="goodsID"></param>
+        public JDPCGoodsCrawler(long goodsID)
+        {
+            _goodsUrl = $"https://item.jd.com/{goodsID}.html";
+            _html = HttpGet(_goodsUrl);
+            _doc = BuildHtmlDocument(_html);
+        }
+        #endregion
+
+        #region 商品名称
+
+        /// <summary>
+        ///提取商品名称
+        /// </summary>
+        /// <returns></returns>
+        public string ExtractGoodsName()
+        {
+            HtmlNode node = _doc.DocumentNode.SelectSingleNode("//div[@class=\"sku-name\"]");
+            if (node != null)
+            {
+                return node.InnerText.Trim();
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// 提取商品名称前缀，如京东超市、京东国际
+        /// </summary>
+        /// <returns></returns>
+        public List<string> ExtractGoodsNamePrefix()
+        {
+            List<string> list = new List<string>();
+            HtmlNode node = _doc.DocumentNode.SelectSingleNode("//div[@class=\"sku-name\"]");
+            if (node != null)
+            {
+                var imgNodes = node.SelectNodes(".//img");
+                if (imgNodes != null)
+                {
+                    foreach (var item in imgNodes)
+                    {
+                        list.Add(item.Attributes["alt"].Value);
+                    }
+                }
+            }
+            return list;
+        }
+        #endregion
+
+        #region 商品销售属性
+
+        /// <summary>
+        /// 提取商品sku规格以及对应的京东商品ID
+        /// </summary>
+        /// <returns></returns>
+        public List<(string goodsID, string[] attrValues)> ExtractSaleProp()
+        {
+            List<(string goodsID, string[] attrValues)> list = new List<(string goodsID, string[] attrValues)>();
+            var colorSizeList = ExtractColorSize();
+            var attrlist = ExtractSalePropCategory();
+            var attrValueList = attrlist.Select(k => k.attrValues).ToList();
+            var mergerAttrlist = Cartesian(attrValueList);
+            foreach (var item in mergerAttrlist)
+            {
+                var tempList = colorSizeList;
+                foreach (var attrValue in item)
+                {
+                    tempList = tempList.Where(k => k.Contains("\"" + attrValue + "\"")).ToList();
+                }
+                string attr = tempList.FirstOrDefault();
+                if (string.IsNullOrWhiteSpace(attr))
+                {
+                    continue;
+                }
+                Regex regex = new Regex("\"skuId\":(?<skuID>\\d+)");
+                var match = regex.Match(attr);
+                if (match.Success)
+                {
+                    string goodsID = match.Groups["skuID"].Value;
+                    list.Add((goodsID, item.ToArray()));
+                }
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 提取商品sku属性信息
+        /// </summary>
+        /// <returns></returns>
+        public List<(string attrName, List<string> attrValues)> ExtractSalePropCategory()
+        {
+            List<(string attrName, List<string> attrValues)> list = new List<(string attrName, List<string> attrValues)>();
+            var colorSizelist = ExtractColorSize();
+            foreach (var item in colorSizelist)
+            {
+                if (string.IsNullOrWhiteSpace(item))
+                {
+                    continue;
+                }
+                string[] kv = item.Split(new string[] { ",\"" }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var el in kv)
+                {
+                    if (!el.Contains("skuId"))
+                    {
+                        string[] attrs = el.Split(new char[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
+                        string attrName = attrs[0].TrimStart('"').TrimEnd('"').Trim();
+                        string attrValue = attrs[1].TrimStart('"').TrimEnd('"').Trim();
+                        if (list.Any(k => k.attrName == attrName))
+                        {
+                            var model = list.FirstOrDefault(k => k.attrName == attrName);
+                            if (!model.attrValues.Any(k => k == attrValue))
+                            {
+                                model.attrValues.Add(attrValue);
+                            }
+                        }
+                        else
+                        {
+                            list.Add((attrName, new string[] { attrValue }.ToList()));
+                        }
+                    }
+                }
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 提取页面colorSize参数内容
+        /// </summary>
+        /// <returns></returns>
+        public List<string> ExtractColorSize()
+        {
+            List<string> list = new List<string>();
+            var html = _doc.DocumentNode.InnerHtml;
+            Regex regex = new Regex(@"colorSize: \[(?<list>[\s\S]*?)\],");
+            Match math = regex.Match(html);
+            if (math.Success)
+            {
+                string content = math.Groups["list"].Value;
+                regex = new Regex(@"\{(?<item>[\s\S]*?)\}");
+                MatchCollection matchs = regex.Matches(content);
+                foreach (Match itemMatch in matchs)
+                {
+                    list.Add(itemMatch.Groups["item"].Value);
+                }
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 笛卡尔乘积算法
+        /// </summary>
+        private List<List<string>> Cartesian(List<List<string>> lstSplit)
+        {
+            var lstResult = new List<List<string>>();
+            if (lstSplit.Any())
+            {
+                int count = 1;
+                lstSplit.ForEach(item => count *= item.Count);
+
+                for (int i = 0; i < count; ++i)
+                {
+                    var lstTemp = new List<string>();
+                    int j = 1;
+                    lstSplit.ForEach(item =>
+                    {
+                        j *= item.Count;
+                        lstTemp.Add(item[(i / (count / j)) % item.Count]);
+                    });
+                    lstResult.Add(lstTemp);
+                }
+            }
+            return lstResult;
+        }
+
+        #endregion
+
+        #region 商品基础属性
+
+        /// <summary>
+        ///提取规则参数与包装
+        /// </summary>
+        /// <returns></returns>
+        public List<GoodsSpecAndPackage> ExtractSpecAndPackage()
+        {
+            List<GoodsSpecAndPackage> list = new List<GoodsSpecAndPackage>();
+            HtmlNodeCollection nodeList = _doc.DocumentNode.SelectNodes("//div[@id=\"detail\"]//div[@class=\"Ptable-item\"]");
+            if (nodeList != null)
+            {
+                foreach (HtmlNode node in nodeList)
+                {
+                    GoodsSpecAndPackage model = new GoodsSpecAndPackage
+                    {
+                        GroupName = node.SelectSingleNode("./h3").InnerText
+                    };
+                    var subNodeList = node.SelectNodes(".//dl[@class=\"clearfix\"]");
+                    if (subNodeList != null)
+                    {
+                        foreach (var subNode in subNodeList)
+                        {
+                            string name = subNode.SelectSingleNode("./dt").InnerText;
+                            string value = subNode.SelectSingleNode(".//dd[last()]").InnerText;
+                            GoodsSpecAndPackage.SpecAttr subModel = new GoodsSpecAndPackage.SpecAttr
+                            {
+                                Name = name,
+                                Value = value.Replace("&nbsp;", " ")
+                            };
+                            model.Attrs.Add(subModel);
+                        }
+                    }
+                    list.Add(model);
+                }
+            }
+            HtmlNode packageNode = _doc.DocumentNode.SelectSingleNode("//div[@id=\"detail\"]//div[@class=\"package-list\"]");
+            if (packageNode != null)
+            {
+                GoodsSpecAndPackage model = new GoodsSpecAndPackage
+                {
+                    GroupName = packageNode.SelectSingleNode("./h3").InnerText
+                };
+
+                GoodsSpecAndPackage.SpecAttr subModel = new GoodsSpecAndPackage.SpecAttr
+                {
+                    Name = model.GroupName,
+                    Value = packageNode.SelectSingleNode("./p").InnerText
+                };
+                model.Attrs.Add(subModel);
+                list.Add(model);
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 提取商品介绍中的基本规格参数
+        /// </summary>
+        /// <returns></returns>
+        public List<GoodsSpecAndPackage.SpecAttr> ExtractSpecFromBaseIntroduction()
+        {
+            List<GoodsSpecAndPackage.SpecAttr> list = new List<GoodsSpecAndPackage.SpecAttr>();
+            HtmlNodeCollection nodes = _doc.DocumentNode.SelectNodes("//div[@id=\"detail\"]//ul[@class=\"parameter2 p-parameter-list\"]//li");
+            if (nodes != null)
+            {
+                foreach (var item in nodes)
+                {
+                    string content = item.InnerText;
+                    if (!string.IsNullOrWhiteSpace(content))
+                    {
+                        string[] data = content.Split(new string[] { "：" }, StringSplitOptions.RemoveEmptyEntries);
+                        GoodsSpecAndPackage.SpecAttr model = new GoodsSpecAndPackage.SpecAttr
+                        {
+                            Name = data[0],
+                            Value = data.Length > 1 ? data[1] : "",
+                        };
+                        list.Add(model);
+                    }
+                }
+            }
+            return list;
+        }
+        #endregion
+
+        #region 商品品牌
+
+        /// <summary>
+        /// 提取商品品牌
+        /// </summary>
+        /// <returns></returns>
+        public string ExtractBrandName()
+        {
+            HtmlNode node = _doc.DocumentNode.SelectSingleNode("//ul[@id=\"parameter-brand\"]");
+            if (node != null)
+            {
+                var brandNode = node.SelectSingleNode(".//a");
+                if (brandNode != null)
+                {
+                    return brandNode.InnerText.Trim();
+                }
+            }
+            var list = ExtractSpecAndPackage();
+            var model = list.FirstOrDefault(k => k.Attrs.Any(p => p.Name == "品牌"));
+            if (model != null)
+            {
+                return model.Attrs.FirstOrDefault(k => k.Name == "品牌").Value;
+            }
+            return string.Empty;
+        }
+
+        #endregion
+
+        #region 商品分类
+
+        /// <summary>
+        /// 提取商品分类
+        /// </summary>
+        /// <returns></returns>
+        public string[] ExtractSortIDs()
+        {
+            HtmlNode node = _doc.DocumentNode.SelectSingleNode("//div[@id=\"crumb-wrap\"]");
+            if (node != null)
+            {
+                var brandNode = node.SelectSingleNode(".//a[@clstag=\"shangpin|keycount|product|mbNav-3\"]");
+                if (brandNode != null)
+                {
+                    string href = brandNode.Attributes["href"].Value;
+                    if (!string.IsNullOrWhiteSpace(href))
+                    {
+                        string catIDs = href.Substring(href.LastIndexOf("=") + 1);
+                        return catIDs.Split(',');
+                    }
+                }
+            }
+            return new string[] { };
+        }
+
+        #endregion
+
+        #region 商品图片
+        /// <summary>
+        /// 提取商品Banner图片地址
+        /// </summary>
+        /// <returns></returns>
+        public List<string> ExtractBannerImage()
+        {
+            List<string> picList = new List<string>();
+            HtmlNodeCollection nodeList = _doc.DocumentNode.SelectNodes("//div[@id=\"spec-list\"]//img");
+            if (nodeList != null)
+            {
+                foreach (HtmlNode item in nodeList)
+                {
+                    string imageUrl = item.Attributes["src"].Value;
+                    if (!string.IsNullOrWhiteSpace(imageUrl))
+                    {
+                        picList.Add(ImageTo800X800(GetFullImageUrl(imageUrl)));
+                    }
+                }
+            }
+            return picList;
+        }
+
+        /// <summary>
+        /// 获取商品详情描述接口
+        /// </summary>
+        /// <returns></returns>
+        private string ExtractDescApi()
+        {
+            string content = _doc.DocumentNode.InnerHtml;
+            Regex regex = new Regex(@"desc: '(?<url>[\s\S]*?)'");
+            Match math = regex.Match(content);
+            if (math.Success)
+            {
+                string url = math.Groups["url"].Value;
+                if (!string.IsNullOrWhiteSpace(url))
+                {
+                    url = "https:" + url;
+                    return url;
+                }
+            }
+            return string.Empty;
+        }
+        #endregion
+
+        #region 商品店铺
+        /// <summary>
+        /// 提取店铺名称跟链接地址
+        /// </summary>
+        /// <returns></returns>
+        public (string storeName, string storeUrl) ExtractStore()
+        {
+            HtmlNode node = _doc.DocumentNode.SelectSingleNode("//div[@id=\"crumb-wrap\"]");
+            if (node != null)
+            {
+                var storeNode = node.SelectSingleNode(".//div[@class=\"name\"]/a");
+                if (storeNode != null)
+                {
+                    string href = storeNode.Attributes["href"].Value;
+                    string name = storeNode.InnerText;
+                    return (name, href);
+                }
+            }
+            return (string.Empty, string.Empty);
+        }
+        #endregion
+
+        #region 商品第几件起售
+        /// <summary>
+        /// 提取取第几件起售
+        /// </summary>
+        /// <returns></returns>
+        public int ExtractSalePiece()
+        {
+            HtmlNode node = _doc.DocumentNode.SelectSingleNode("//input[@id=\"buy-num\"]");
+            if (node != null)
+            {
+                string value = node.Attributes["value"].Value;
+                return Convert.ToInt32(value);
+            }
+            return 1;
+        }
+        #endregion
+
+        #region 商品关键参数
+
+        /// <summary>
+        /// 提取VenderID参数
+        /// </summary>
+        /// <returns></returns>
+        public string ExtractVenderID()
+        {
+            Regex regex = new Regex(@"venderId:(?<key>[\s\S]*?),");
+            Match match = regex.Match(_html);
+            if (match.Success)
+            {
+                return match.Groups["key"].Value;
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// 提取ShopID参数
+        /// </summary>
+        /// <returns></returns>
+        public string ExtractShopID()
+        {
+            Regex regex = new Regex(@"shopId:'(?<key>[\s\S]*?)',");
+            Match match = regex.Match(_html);
+            if (match.Success)
+            {
+                return match.Groups["key"].Value;
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// 提取CatID分类参数
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<string> ExtractCatID()
+        {
+            Regex regex = new Regex(@"cat: \[(?<key>[\s\S]*?)\],");
+            Match match = regex.Match(_html);
+            if (match.Success)
+            {
+                return match.Groups["key"].Value.Split(',');
+            }
+            return Enumerable.Empty<string>();
+        }
+
+        /// <summary>
+        /// 提取MainVideoID参数
+        /// </summary>
+        /// <returns></returns>
+        public string ExtractMainVideoID()
+        {
+            Regex regex = new Regex("\"mainVideoId\":\"(?<key>[\\s\\S]*?)\"");
+            Match match = regex.Match(_html);
+            if (match.Success)
+            {
+                return match.Groups["key"].Value;
+            }
+            return string.Empty;
+        }
+
+        #endregion
+    }
+}
