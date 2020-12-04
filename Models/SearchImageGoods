@@ -37,4 +37,30 @@ namespace CX4.Crawler.Models
             }
         }
     }
+    
+    /// <summary>
+    /// 按图搜索淘宝图片商品类
+    /// </summary>
+    public class SearchTaoBaoImageGoods
+    {
+        /// <summary>
+        /// 商品ID
+        /// </summary>
+        public long GoodsID { get; set; }
+
+        /// <summary>
+        /// 商品名称
+        /// </summary>
+        public string GoodsName { get; set; }
+
+        /// <summary>
+        /// 商品地址
+        /// </summary>
+        public string GoodsUrl { get; set; }
+
+        /// <summary>
+        /// 商品图片地址
+        /// </summary>
+        public string ImageUrl { get; set; }
+    }
 }
