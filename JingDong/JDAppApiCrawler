@@ -1,0 +1,344 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+using CX4.Crawler.Models;
+
+using Newtonsoft.Json;
+
+namespace CX4.Crawler.JingDong
+{
+    /// <summary>
+    /// 京东App端接口爬虫
+    /// </summary>
+    public class JDAppApiCrawler : JDAppCrawler
+    {
+        #region 商品规格与包装
+        /// <summary>
+        /// 提取商品规格与包装
+        /// </summary>
+        /// <param name="goodsID"></param>
+        /// <returns></returns>
+        public List<GoodsSpecAndPackage> ExtractSpecAndPackage(string goodsID)
+        {
+            List<GoodsSpecAndPackage> list = new List<GoodsSpecAndPackage>();
+            var specList = ExtractSpecification(goodsID);
+            if (specList.Any())
+            {
+                list.AddRange(specList);
+            }
+            string packing = ExtractPackingList(goodsID);
+            if (!string.IsNullOrWhiteSpace(packing))
+            {
+                if (!list.Any(k => k.GroupName.Equals("包装清单")))
+                {
+                    GoodsSpecAndPackage model = new GoodsSpecAndPackage
+                    {
+                        GroupName = "包装清单"
+                    };
+                    GoodsSpecAndPackage.SpecAttr specAttrModel = new GoodsSpecAndPackage.SpecAttr
+                    {
+                        Name = "包装清单",
+                        Value = packing
+                    };
+                    model.Attrs.Add(specAttrModel);
+                    list.Add(model);
+                }
+                var packModel = list.FirstOrDefault(k => k.GroupName.Equals("包装清单"));
+                packModel.Attrs.FirstOrDefault().Value = packing;
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 提取商品参数
+        /// </summary>
+        /// <param name="goodsID"></param>
+        /// <returns></returns>
+        private List<GoodsSpecAndPackage> ExtractSpecification(string goodsID)
+        {
+            List<GoodsSpecAndPackage> list = new List<GoodsSpecAndPackage>();
+            string url = string.Format("https://wq.jd.com/commodity/itembranch/getspecification?callback=commParamCallBackA&skuid={0}&t=0.8422837896210369", goodsID);
+            var content = HttpGet(url);
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                Regex regex = new Regex("\"propGroups\":(?<key>[\\s\\S]*?)}\n");
+                Match math = regex.Match(content);
+                if (math.Success)
+                {
+                    string data = math.Groups["key"].Value;
+                    var responseList = JsonConvert.DeserializeObject<List<PropGroupsResponse>>(data);
+                    foreach (var item in responseList)
+                    {
+                        GoodsSpecAndPackage model = new GoodsSpecAndPackage
+                        {
+                            GroupName = item.GroupName
+                        };
+                        foreach (var subItem in item.Atts)
+                        {
+                            model.Attrs.Add(new GoodsSpecAndPackage.SpecAttr
+                            {
+                                Name = subItem.AttName,
+                                Value = string.Join(",", subItem.Vals),
+                            });
+                        }
+                    }
+                }
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 提取商品包装清单
+        /// </summary>
+        /// <param name="goodsID"></param>
+        /// <returns></returns>
+        private string ExtractPackingList(string goodsID)
+        {
+            string url = string.Format("https://yx.3.cn/service/info.action?k1={0}&source=wxsqitemsou&callback=packageServiceA&t=0.07280848336274559", goodsID);
+            var html = HttpGet(url);
+            if (!string.IsNullOrWhiteSpace(html))
+            {
+                Regex regex = new Regex("\"packList\":\"(?<key>[\\s\\S]*?)\"");
+                Match math = regex.Match(html);
+                if (math.Success)
+                {
+                    return math.Groups["key"].Value;
+                }
+            }
+            return string.Empty;
+        }
+        #endregion
+
+        #region 商品活动
+
+        /// <summary>
+        /// 提取商品促销、优惠券活动信息
+        /// </summary>
+        /// <param name="goodsID"></param>
+        /// <param name="venderID"></param>
+        /// <param name="lastCatID"></param>
+        /// <param name="salePrice"></param>
+        /// <returns></returns>
+        public List<GoodsActivity> ExtractPromAndCoupon(string goodsID, string venderID, string lastCatID, decimal salePrice)
+        {
+            var list = ExtractPromInfo(goodsID);
+            list.AddRange(ExtractCouponInfo(goodsID, venderID, lastCatID, salePrice));
+            return list;
+        }
+
+        /// <summary>
+        ///提取商品促销信息
+        /// </summary>
+        /// <param name="goodsID"></param>
+        /// <returns></returns>
+        private List<GoodsActivity> ExtractPromInfo(string goodsID)
+        {
+            var list = new List<GoodsActivity>();
+            string url = string.Format("https://wq.jd.com/commodity/promo/get?skuid={0}&callback=jsonp688877", goodsID);
+            string content = HttpGet(url);
+            Check_PromInfo_State(content);
+            Regex regexInfo = new Regex("\"subextinfo\":\"{(?<data>[\\s\\S]*?)}\",");
+            MatchCollection matches = regexInfo.Matches(content);
+            foreach (Match match in matches)
+            {
+                var data = match.Groups["data"].Value;
+                if (string.IsNullOrWhiteSpace(data))
+                {
+                    continue;
+                }
+                data = "{" + data.Replace(@"\", "") + "}";
+                var model = JsonConvert.DeserializeObject<SubextinfoResponse>(data);
+                if (model != null)
+                {
+                    if (model.ExtType == 1 && model.SubExtType == 1)
+                    {
+                        #region 满减
+                        list.Add(new GoodsActivity
+                        {
+                            Requirements = model.NeedMoney,
+                            Rebate = model.RewardMoney,
+                            ActivityType = 1,
+                            Description = $"满{model.NeedMoney}元减{model.RewardMoney}元"
+                        });
+                        #endregion
+                    }
+                    else if (model.ExtType == 2)
+                    {
+                        #region 每满
+                        if (model.SubExtType == 8 || model.SubExtType == 9)
+                        {
+                            //每满
+                            var detail = new GoodsActivity
+                            {
+                                Requirements = model.NeedMoney,
+                                Rebate = model.RewardMoney,
+                                ActivityType = 3,
+                                Description = $"每满{model.NeedMoney}元，可减{model.RewardMoney}元现金"
+                            };
+                            if (model.SubExtType == 8)
+                            {
+                                detail.Description += $"，最多可减{model.TopMoney}元";
+                            }
+                            list.Add(detail);
+                        }
+                        #endregion
+                    }
+                    else if (model.ExtType == 6 && model.SubExtType == 14)
+                    {
+                        #region 满减
+                        foreach (var item in model.SubRuleList)
+                        {
+                            list.Add(new GoodsActivity
+                            {
+                                Requirements = item.NeedMoney,
+                                Rebate = item.RewardMoney,
+                                ActivityType = 1,
+                                Description = $"满{item.NeedMoney}元减{item.RewardMoney}元"
+                            });
+                        }
+                        #endregion
+                    }
+                    else if (model.ExtType == 15 && model.SubExtType == 23)
+                    {
+                        #region 满几件，总价打几折
+                        foreach (var item in model.SubRuleList)
+                        {
+                            list.Add(new GoodsActivity
+                            {
+                                Requirements = item.NeedNum,
+                                Rebate = item.Rebate,
+                                ActivityType = 4,
+                                Description = $"满{item.NeedNum}件，总价打{item.Rebate}折"
+                            });
+                        }
+                        #endregion
+                    }
+                }
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 检测促销接口数据是否异常
+        /// </summary>
+        /// <param name="content"></param>
+        private void Check_PromInfo_State(string content)
+        {
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                Regex regexErrcode = new Regex("\"errcode\":\"(?<data>[\\s\\S]*?)\",");
+                var retMatch = regexErrcode.Match(content);
+                if (retMatch.Success)
+                {
+                    int errcode = Convert.ToInt32(retMatch.Groups["data"].Value);
+                    if (errcode == 0)
+                    {
+                        return;
+                    }
+                }
+            }
+            throw new Exception($"移动端促销接口异常,返回内容:{content}");
+        }
+
+        /// <summary>
+        /// 提取商品优惠券信息
+        /// </summary>
+        /// <param name="skuID"></param>
+        /// <param name="venderID"></param>
+        /// <param name="lastCatID"></param>
+        /// <param name="salePrice"></param>
+        /// <returns></returns>
+        private List<GoodsActivity> ExtractCouponInfo(string skuID, string venderID, string lastCatID, decimal salePrice)
+        {
+            var list = new List<GoodsActivity>();
+            string path = "https://wq.jd.com/bases/couponsoa/avlCoupon";
+            string param = string.Format("?callback=getCouponListCBA&sceneval=2&cid={0}&sku={1}&price={2}&platform=4&popId={3}&usejing=true&usedong=true&useglobal=false&t=0.740740586903166", lastCatID, skuID, salePrice, venderID);
+            string url = path + param;
+            string content = HttpGet(url);
+            Check_CouponInfo_State(content);
+            Regex regexInfo = new Regex("\"coupons\":(?<data>[\\s\\S]*?),\"sku_info\"");
+            MatchCollection matches = regexInfo.Matches(content);
+            foreach (Match match in matches)
+            {
+                var data = match.Groups["data"].Value;
+                if (string.IsNullOrWhiteSpace(data))
+                {
+                    continue;
+                }
+                var modelList = JsonConvert.DeserializeObject<List<CouponsResponse>>(data);
+                foreach (var model in modelList)
+                {
+                    DateTime? beginDate = null;
+                    DateTime? endDate = null;
+                    if (!string.IsNullOrWhiteSpace(model.TimeDesc))
+                    {
+                        var tiems = model.TimeDesc.Split('-');
+                        beginDate = Convert.ToDateTime(tiems[0]);
+                        if (tiems.Length > 1)
+                        {
+                            endDate = Convert.ToDateTime(Convert.ToDateTime(tiems[1]).ToString("yyyy-MM-dd 23:59:59"));
+                        }
+                    }
+                    if (model.CouponType == 1 && model.CouponStyle == 0 && (model.CouponKind == 1 || model.CouponKind == 2))
+                    {
+                        #region 满多少元减多少元
+                        list.Add(new GoodsActivity
+                        {
+                            Requirements = model.Quota,
+                            Rebate = model.Discount,
+                            ActivityType = 2,
+                            BeginTime = beginDate,
+                            EndTime = endDate,
+                            Description = $"满{model.Quota}减{model.Discount}"
+                        }); ;
+                        #endregion
+                    }
+                    if (model.CouponType == 1 && model.CouponStyle == 3 && model.CouponKind == 1)
+                    {
+                        #region 满多少元享多少折(换算：满多少元减多少元)
+                        if (model.DiscountDesc != null && model.DiscountDesc.Info.Any())
+                        {
+                            var infoModel = model.DiscountDesc.Info.FirstOrDefault();
+                            list.Add(new GoodsActivity
+                            {
+                                Requirements = model.Quota,
+                                Rebate = model.Discount,
+                                ActivityType = 2,
+                                BeginTime = beginDate,
+                                EndTime = endDate,
+                                Description = $"满{model.Quota}减{model.Discount}(满{infoModel.Quota}享{infoModel.Discount * 10})"
+                            });
+                        }
+                        #endregion
+                    }
+                }
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 检测优惠券接口数据是否异常
+        /// </summary>
+        /// <param name="content"></param>
+        private void Check_CouponInfo_State(string content)
+        {
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                Regex regexRet = new Regex("\"ret\":(?<data>[\\s\\S]*?),");
+                var retMatch = regexRet.Match(content);
+                if (retMatch.Success)
+                {
+                    int ret = Convert.ToInt32(retMatch.Groups["data"].Value);
+                    if (ret == 0)
+                    {
+                        return;
+                    }
+                }
+            }
+            throw new Exception($"移动端优惠券接口异常,返回内容:{content}");
+        }
+        #endregion
+    }
+}
