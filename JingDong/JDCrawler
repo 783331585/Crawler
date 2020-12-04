@@ -1,0 +1,47 @@
+using System.Text.RegularExpressions;
+
+namespace CX4.Crawler.JingDong
+{
+    /// <summary>
+    /// 京东爬虫基类
+    /// </summary>
+    public abstract class JDCrawler : BaseCrawler
+    {
+        /// <summary>
+        /// 转换成京东800*800格式的图片
+        /// </summary>
+        /// <param name="imageUrl"></param>
+        /// <returns></returns>
+        protected string ImageTo800X800(string imageUrl)
+        {
+            if (imageUrl.Contains("!"))
+            {
+                imageUrl = imageUrl.Substring(0, imageUrl.LastIndexOf('!'));
+            }
+            Regex regex = new Regex(@"/n(?<size>\d+)/(?<spec>[\s\S]*?)/");
+            Match math = regex.Match(imageUrl);
+            if (math.Success)
+            {
+                string size = math.Groups["size"].Value;
+                string sepc = math.Groups["spec"].Value;
+                imageUrl = imageUrl.Replace("/n" + size + "/", "/n12/");
+                imageUrl = imageUrl.Replace("/" + sepc + "/", "/jfs/");
+            }
+            return imageUrl;
+        }
+
+        /// <summary>
+        /// 获取完整的图片地址
+        /// </summary>
+        /// <param name="imageUrl"></param>
+        /// <returns></returns>
+        protected string GetFullImageUrl(string imageUrl)
+        {
+            if (imageUrl.ToLower().IndexOf("http") == -1 && imageUrl.ToLower().IndexOf("https") == -1)
+            {
+                imageUrl = "http:" + imageUrl;
+            }
+            return imageUrl;
+        }
+    }
+}
