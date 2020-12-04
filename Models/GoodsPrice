@@ -1,0 +1,49 @@
+namespace CX4.Crawler.Models
+{
+    /// <summary>
+    /// 商品价格类
+    /// </summary>
+    public class GoodsPrice
+    {
+        /// <summary>
+        /// 商品ID
+        /// </summary>
+        public string GoodsID { get; set; }
+
+        /// <summary>
+        /// 商品售价
+        /// </summary>
+        public decimal SalePrice { get; set; }
+
+        /// <summary>
+        /// 商品市场价
+        /// </summary>
+        public decimal? MarketPrice { get; set; }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public class GoodsPingGou
+    {
+        /// <summary>
+        /// 商品ID
+        /// </summary>
+        public string GoodsID { get; set; }
+
+        /// <summary>
+        /// 是否拼购
+        /// </summary>
+        public bool IsPingGou { get; set; }
+
+        /// <summary>
+        /// 商品售价
+        /// </summary>
+        public decimal SalePrice { get; set; }
+
+        /// <summary>
+        /// 拼购价
+        /// </summary>
+        public decimal PingGouSalePrice { get; set; }
+    }
+}
