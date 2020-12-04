@@ -1,0 +1,29 @@
+namespace CX4.Crawler.JingDong
+{
+    /// <summary>
+    /// 京东App端爬虫基类
+    /// </summary>
+    public abstract class JDAppCrawler : JDCrawler
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        protected override string UserAgent => "Mozilla/5.0 (iPad; CPU OS 11_0 like Mac OS X) AppleWebKit/604.1.34 (KHTML, like Gecko) Version/11.0 Mobile/15A5341f Safari/604.1";
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected override string Accept => "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected override string Referer => "https://m.jd.com/";
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected override string Cookie => "wxa_level=1; retina=0; cid=9; webp=1; __jdv=122270672%7Cdirect%7C-%7Cnone%7C-%7C1596536660533; __jda=122270672.15965366605331246008463.1596536660.1596536660.1596536660.1; mba_muid=15965366605331246008463; __jdc=122270672; jxsid=15965366606313069687; sc_width=1920; shshshfpb=1823bc91e2c734a1199ba3ac47c5e438521064a1438afb9a25b30b9ffb; shshshfpa=7a0c1f22-0ec1-89d6-5796-b47c0d5de6f5-1596536661; visitkey=22476528425872045; jxsid_s_u=https%3A//item.m.jd.com/product/100011412364.html; sk_history=100011412364%2C; 3AB9D23F7A4B3C9B=XVSWFWJ53AHOY6YTI5MZEZTSTIKD3MPGQOL7AORD7CPLUZ2DJQFWX4EHEZOMAWZO7GCHZLEG7HM43GLDR4QQEPAY24; TrackerID=1gqhMc4Y-iZi510lA2rOp3PvXQmWUsVUR4dFlp_GKYTi74ZTZL7CkOacXOMzJrNX1jM1P6xrXLMJneVB8Kv5oSOf8JfoFPCkjclFFfyFzDQ; pt_key=AAJfKThCADBRXT7llMzI5z84QFdyRDhP-NdfqCuyWVOA0TVYuWEQupJzNDsT2xX0F7djJVnbHVw; pt_pin=%E5%BD%AD%E4%B8%9C%E4%B8%9C; pt_token=m8ltnxe6; pwdt_id=%E5%BD%AD%E4%B8%9C%E4%B8%9C; shshshfp=a11f50b754c0371fc037c9e208b1bbca; wq_logid=1596536919.488678830; wqmnx1=MDEyNjM3Ni9tbWMxNDcyMmkwbzZuNGUvICxHQzgwUzUxc2EyM1dDKSFS; __jdb=122270672.7.15965366605331246008463|1.1596536660; mba_sid=1596536660535674569621276668.7; __jd_ref_cls=MDownLoadFloat_FloatShield; __wga=1596536920483.1596536661535.1596536661535.1596536661535.5.1; PPRD_P=UUID.15965366605331246008463-LOGID.1596536920499.28000679; jxsid_s_t=1596536920565; shshshsID=9349679a8acc3638c7622b415cefd664_7_1596536921137";
+
+    }
+}
