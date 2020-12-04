@@ -1,0 +1,276 @@
+using System;
+using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+
+using HtmlAgilityPack;
+
+using Newtonsoft.Json;
+
+namespace CX4.Crawler
+{
+    /// <summary>
+    /// 爬虫基类
+    /// </summary>
+    public abstract class BaseCrawler
+    {
+        #region abstract
+
+        /// <summary>
+        /// UserAgent
+        /// </summary>
+        protected abstract string UserAgent { get; }
+
+        /// <summary>
+        /// Accept
+        /// </summary>
+        protected abstract string Accept { get; }
+
+        /// <summary>
+        /// Referer
+        /// </summary>
+        protected abstract string Referer { get; }
+
+        /// <summary>
+        /// Cookie
+        /// </summary>
+        protected abstract string Cookie { get; }
+
+        #endregion
+
+        #region http get请求
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        private HttpContent HttpGetContent(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                throw new ArgumentNullException(nameof(url));
+            }
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = delegate { return true; }
+            };
+            using HttpClient client = new HttpClient(handler);
+            SetRequestHeaders(client);
+            var content = client.GetAsync(url).Result.Content;
+            return content;
+        }
+
+        /// <summary>
+        /// http get请求
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public string HttpGet(string url)
+        {
+            try
+            {
+                using var content = HttpGetContent(url);
+                return content.ReadAsStringAsync().Result;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"请求网址:{url},异常信息:{ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// http get请求
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public T HttpGet<T>(string url)
+        {
+            try
+            {
+                string content = HttpGet(url);
+                return string.IsNullOrWhiteSpace(content) ? default : JsonConvert.DeserializeObject<T>(content);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"请求网址:{url},异常信息:{ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// http get请求
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public MemoryStream HttpGetStream(string url)
+        {
+            try
+            {
+                using var content = HttpGetContent(url);
+                using var stream = content.ReadAsStreamAsync().Result;
+                return stream as MemoryStream;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"请求网址:{url},异常信息:{ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// http get请求
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public byte[] HttpGetByte(string url)
+        {
+            try
+            {
+                using var content = HttpGetContent(url);
+                return content.ReadAsByteArrayAsync().Result;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"请求网址:{url},异常信息:{ex.Message}", ex);
+            }
+        }
+
+        #endregion
+
+        #region http post请求
+
+        /// <summary>
+        /// http post请求
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="param"></param>
+        /// <returns></returns>
+        public string HttpPost(string url, object param)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                throw new ArgumentNullException(nameof(url));
+            }
+            try
+            {
+                var handler = new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = delegate { return true; }
+                };
+                string content = JsonConvert.SerializeObject(param);
+                HttpContent httpContent = new StringContent(content, Encoding.UTF8, "application/json");
+                using HttpClient client = new HttpClient(handler);
+                SetRequestHeaders(client);
+                return client.PostAsync(url, httpContent).Result.Content.ReadAsStringAsync().Result;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"请求网址:{url},异常信息:{ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// http post请求
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="url"></param>
+        /// <param name="param"></param>
+        /// <returns></returns>
+        public T HttpPost<T>(string url, object param)
+        {
+            try
+            {
+                string content = HttpPost(url, param);
+                return string.IsNullOrWhiteSpace(content) ? default : JsonConvert.DeserializeObject<T>(content);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"请求网址:{url},异常信息:{ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// http post请求
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="byteFile"></param>
+        /// <returns></returns>
+        public string HttpPostFile(string url, byte[] byteFile)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                throw new ArgumentNullException(nameof(url));
+            }
+            if (byteFile == null || byteFile.LongLength == 0)
+            {
+                throw new ArgumentNullException(nameof(byteFile));
+            }
+            try
+            {
+                var handler = new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = delegate { return true; }
+                };
+                string boundary = "----" + DateTime.Now.Ticks.ToString("x");
+                var byteContent = new ByteArrayContent(byteFile);
+                byteContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+                var content = new MultipartFormDataContent(boundary)
+                {
+                    { byteContent, "file", $"{DateTime.Now:yyyyMMddHHmmss}.jpg" }
+                };
+                using HttpClient client = new HttpClient(handler);
+                SetRequestHeaders(client);
+                return client.PostAsync(url, content).Result.Content.ReadAsStringAsync().Result;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"请求网址:{url},异常信息:{ex.Message}", ex);
+            }
+        }
+
+        #endregion
+
+        #region 设置请求头信息
+
+        /// <summary>
+        /// 设置请求头信息
+        /// </summary>
+        /// <param name="client"></param>
+        private void SetRequestHeaders(HttpClient client)
+        {
+            client.DefaultRequestHeaders.Add("User-Agent", UserAgent);
+            client.DefaultRequestHeaders.Add("Accept", Accept);
+            client.DefaultRequestHeaders.Add("Referer", Referer);
+            client.DefaultRequestHeaders.Add("Cookie", Cookie);
+            AppendRequestHeaders(client);
+        }
+
+        /// <summary>
+        /// 自定义头信息
+        /// </summary>
+        /// <param name="client"></param>
+        protected virtual void AppendRequestHeaders(HttpClient client)
+        {
+
+        }
+
+        #endregion
+
+        #region HTML解析
+
+        /// <summary>
+        ///解析成html文档
+        /// </summary>
+        /// <param name="html"></param>
+        /// <returns></returns>
+        public HtmlDocument BuildHtmlDocument(string html)
+        {
+            HtmlDocument doc = new HtmlDocument();
+            doc.LoadHtml(html);
+            return doc;
+        }
+
+        #endregion
+    }
+}
