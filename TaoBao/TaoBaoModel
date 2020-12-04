@@ -1,0 +1,64 @@
+using Newtonsoft.Json;
+
+namespace CX4.Crawler.TaoBao
+{
+    /// <summary>
+    /// 淘宝按图搜索商品
+    /// </summary>
+    internal class SearchImageGoodsResponse
+    {
+        private string imageUrl;
+        private string goodsUrl;
+
+        /// <summary>
+        /// 商品ID
+        /// </summary>
+        [JsonProperty("nid")]
+        public long GoodsID { get; set; }
+
+        /// <summary>
+        /// 商品名称
+        /// </summary>
+        [JsonProperty("title")]
+        public string GoodsName { get; set; }
+
+        /// <summary>
+        /// 商品地址
+        /// </summary>
+        [JsonProperty("detail_url")]
+        public string GoodsUrl
+        {
+            get { return goodsUrl; }
+            set
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    if (value.ToLower().Contains("taobao"))
+                    {
+                        goodsUrl = "https://item.taobao.com/item.htm?id=" + GoodsID;
+                    }
+                    else if (value.ToLower().Contains("tmall"))
+                    {
+                        goodsUrl = "https://detail.tmall.com/item.htm?id=" + GoodsID;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 商品图片地址
+        /// </summary>
+        [JsonProperty("pic_url")]
+        public string ImageUrl
+        {
+            get { return imageUrl; }
+            set
+            {
+                if (!value.StartsWith("https://") || !value.StartsWith("http://"))
+                {
+                    imageUrl = "http:" + value;
+                }
+            }
+        }
+    }
+}
