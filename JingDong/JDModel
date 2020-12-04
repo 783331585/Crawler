@@ -1,0 +1,460 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+using Newtonsoft.Json;
+
+namespace CX4.Crawler.JingDong
+{
+    /// <summary>
+    /// 
+    /// </summary>
+    internal class GoodsDetailRepsonse
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public GoodsDetailRepsonse()
+        {
+            SaleProp = new Dictionary<int, string>();
+            SalePropSeq = new Dictionary<int, string[]>();
+            NewColorSize = new List<SkuItem>();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string SkuName { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string BrandName { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Dictionary<int, string> SaleProp { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Dictionary<int, string[]> SalePropSeq { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<SkuItem> NewColorSize { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public class SkuItem
+        {
+            /// <summary>
+            /// 
+            /// </summary>
+            [JsonProperty("1")]
+            public string Attr1 { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            [JsonProperty("2")]
+            public string Attr2 { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            [JsonProperty("3")]
+            public string Attr3 { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public string SkuID { get; set; }
+        }
+    }
+
+    /// <summary>
+    /// 商品参数
+    /// </summary>
+    internal class PropGroupsResponse
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public PropGroupsResponse()
+        {
+            Atts = new List<AttrModel>();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string GroupName { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<AttrModel> Atts { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public class AttrModel
+        {
+            /// <summary>
+            /// 
+            /// </summary>
+            public string AttName { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public string[] Vals { get; set; }
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    internal class Self_DModel
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        [JsonProperty("vid")]
+        public string VID { get; set; }
+
+        [JsonProperty("id")]
+        public string ShopID { get; set; }
+
+        [JsonProperty("cg")]
+        public string Cat { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public IEnumerable<string> CatID => string.IsNullOrWhiteSpace(Cat) ? Enumerable.Empty<string>() : Cat.Split(':');
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    internal class SubextinfoResponse
+    {
+        /// <summary>
+        /// 1、满多少元减多少元
+        /// 2、每满多少减多少
+        /// 6、满多少元减多少元
+        /// 15、满几件，总价打几折
+        /// </summary>
+        public int ExtType { get; set; }
+
+        /// <summary>
+        /// 1、满多少元减多少元
+        /// 8、每满多少减多少,最多减多少
+        /// 9、每满多少减多少
+        /// 14、满多少元减多少元
+        /// 23、满几件，总价打几折
+        /// </summary>
+        public int SubExtType { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public decimal NeedMoney { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public decimal RewardMoney { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public decimal TopMoney { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<SubRuleModel> SubRuleList { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public class SubRuleModel
+        {
+            /// <summary>
+            /// 
+            /// </summary>
+            public int NeedNum { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public decimal Rebate { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public decimal NeedMoney { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public decimal RewardMoney { get; set; }
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    internal class CouponsResponse
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public int CouponType { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public int CouponStyle { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public int CouponKind { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string TimeDesc { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public decimal Quota { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public decimal Discount { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public DiscountDescModel DiscountDesc { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public class DiscountDescModel
+        {
+            /// <summary>
+            /// 
+            /// </summary>
+            public DiscountDescModel()
+            {
+                Info = new List<InfoModel>();
+            }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public decimal High { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public List<InfoModel> Info { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public class InfoModel
+            {
+                /// <summary>
+                /// 
+                /// </summary>
+                public decimal Quota { get; set; }
+
+                /// <summary>
+                /// 
+                /// </summary>
+                public decimal Discount { get; set; }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 活动信息(促销、优惠券)
+    /// </summary>
+    internal class ActivityResponse
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public ActivityResponse()
+        {
+            SkuCoupon = new List<SkuCouponModel>();
+        }
+
+        /// <summary>
+        /// 是否被封
+        /// </summary>
+        public bool AntiSpider { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string IP { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public PromModel Prom { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<SkuCouponModel> SkuCoupon { get; set; }
+
+        /// <summary>
+        /// 优惠券信息
+        /// </summary>
+        public class SkuCouponModel
+        {
+            /// <summary>
+            /// 
+            /// </summary>
+            public int CouponType { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public int CouponStyle { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public int CouponKind { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public decimal Quota { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public decimal Discount { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public DateTime BeginTime { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public DateTime EndTime { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public string AllDesc { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public string HighDesc { get; set; }
+        }
+
+        /// <summary>
+        /// 促销信息
+        /// </summary>
+        public class PromModel
+        {
+            /// <summary>
+            /// 
+            /// </summary>
+            public PromModel()
+            {
+                PickOneTag = new List<PickOneTagModel>();
+            }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public List<PickOneTagModel> PickOneTag { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public class PickOneTagModel
+            {
+                /// <summary>
+                /// 
+                /// </summary>
+                public string Content { get; set; }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    internal class PriceResponse
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        [JsonProperty("id")]
+        public string JDSkuID { get; set; }
+
+        /// <summary>
+        /// 售价
+        /// </summary>
+        [JsonProperty("p")]
+        public decimal SalePrice { get; set; }
+
+        /// <summary>
+        /// 市场价
+        /// </summary>
+        [JsonProperty("l")]
+        public decimal? MarketPrice { get; set; }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    internal class PingGouResponse
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        [JsonProperty("isPriceValid")]
+        public bool IsPingGou { get; set; }
+
+        /// <summary>
+        /// 拼购价
+        /// </summary>
+        [JsonProperty("bp", NullValueHandling = NullValueHandling.Ignore)]
+        public decimal PingGouSalePrice { get; set; }
+
+        /// <summary>
+        /// 正常售价
+        /// </summary>
+        [JsonProperty("p")]
+        public decimal SalePrice { get; set; }
+
+        /// <summary>
+        /// skuID
+        /// </summary>
+        [JsonProperty("sku_id")]
+        public string SkuID { get; set; }
+    }
+}
