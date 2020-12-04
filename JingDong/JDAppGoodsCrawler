@@ -1,0 +1,203 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+using Newtonsoft.Json;
+
+namespace CX4.Crawler.JingDong
+{
+    /// <summary>
+    /// 京东app端商品爬虫类
+    /// </summary>
+    public class JDAppGoodsCrawler : JDAppCrawler
+    {
+        #region private
+        private readonly string _goodsUrl;
+        private readonly string _html;
+        private GoodsDetailRepsonse _goodsDetailRepsonse;
+        #endregion
+
+        #region 构造函数
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="goodsUrl"></param>
+        public JDAppGoodsCrawler(string goodsUrl)
+        {
+            _goodsUrl = goodsUrl;
+            _html = HttpGet(goodsUrl);
+            Init();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="goodsID"></param>
+        public JDAppGoodsCrawler(long goodsID)
+        {
+            _goodsUrl = $"https://item.m.jd.com/product/{goodsID}.html";
+            _html = HttpGet(_goodsUrl);
+            Init();
+        }
+
+        #endregion
+
+        private void Init()
+        {
+            Regex regex = new Regex("\"item\": (?<json>[\\s\\S]*?)\\}\\);");
+            Match match = regex.Match(_html);
+            if (match.Success)
+            {
+                string json = match.Groups["json"].Value;
+                _goodsDetailRepsonse = JsonConvert.DeserializeObject<GoodsDetailRepsonse>(json);
+            }
+        }
+
+        #region 商品名称
+
+        /// <summary>
+        ///提取商品名称
+        /// </summary>
+        /// <returns></returns>
+        public string ExtractGoodsName()
+        {
+            if (_goodsDetailRepsonse != null)
+            {
+                return _goodsDetailRepsonse.SkuName;
+            }
+            return string.Empty;
+        }
+
+        #endregion
+
+        #region 商品品牌
+
+        /// <summary>
+        /// 提取商品品牌
+        /// </summary>
+        /// <returns></returns>
+        public string ExtractBrandName()
+        {
+            if (_goodsDetailRepsonse != null)
+            {
+                return _goodsDetailRepsonse.BrandName;
+            }
+            return string.Empty;
+        }
+
+        #endregion
+
+        #region 商品销售属性
+        /// <summary>
+        /// 提取商品销售属性
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<(string attrName, List<string> attrValues)> ExtractSalePropCategory()
+        {
+            List<(string attrName, List<string> attrValues)> list = new List<(string attrName, List<string> attrValues)>();
+            if (_goodsDetailRepsonse != null)
+            {
+                foreach (var item in _goodsDetailRepsonse.SaleProp)
+                {
+                    if (!string.IsNullOrWhiteSpace(item.Value))
+                    {
+                        if (_goodsDetailRepsonse.SalePropSeq.Any(k => k.Key == item.Key && k.Value.Any()))
+                        {
+                            var attrValues = _goodsDetailRepsonse.SalePropSeq.FirstOrDefault(k => k.Key == item.Key).Value.ToList();
+                            list.Add((item.Value, attrValues));
+                        }
+                    }
+                }
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// 提取商品销售属性
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<(string goodsID, string[] attrValues)> ExtractSaleProp()
+        {
+            List<(string goodsID, string[] attrValues)> list = new List<(string goodsID, string[] attrValues)>();
+            if (_goodsDetailRepsonse != null)
+            {
+                foreach (var item in _goodsDetailRepsonse.NewColorSize)
+                {
+                    List<string> attrList = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(item.Attr1))
+                    {
+                        attrList.Add(item.Attr1);
+                    }
+                    if (!string.IsNullOrWhiteSpace(item.Attr2))
+                    {
+                        attrList.Add(item.Attr2);
+                    }
+                    if (!string.IsNullOrWhiteSpace(item.Attr3))
+                    {
+                        attrList.Add(item.Attr3);
+                    }
+                    list.Add((item.SkuID, attrList.ToArray()));
+                }
+            }
+            return list;
+        }
+        #endregion
+
+        #region 商品关键参数
+
+        /// <summary>
+        /// 提取VenderID参数
+        /// </summary>
+        /// <returns></returns>
+        public string ExtractVenderID()
+        {
+            var model = ExtractParam();
+            return model?.VID;
+        }
+
+        /// <summary>
+        /// 提取ShopID参数
+        /// </summary>
+        /// <returns></returns>
+        public string ExtractShopID()
+        {
+            var model = ExtractParam();
+            return model?.ShopID;
+        }
+
+        /// <summary>
+        /// 提取CatID分类参数
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<string> ExtractCatID()
+        {
+            var model = ExtractParam();
+            return model?.CatID;
+        }
+
+        /// <summary>
+        /// 提取关键参数
+        /// </summary>
+        /// <returns></returns>
+        private Self_DModel ExtractParam()
+        {
+            if (!string.IsNullOrWhiteSpace(_html))
+            {
+                Regex regex = new Regex("(\"self_D\"|\"D\"):{(?<data>[\\s\\S]*?)},");
+                var match = regex.Match(_html);
+                if (match.Success)
+                {
+                    var data = match.Groups["data"].Value;
+                    data = "{" + data + "}";
+                    var model = JsonConvert.DeserializeObject<Self_DModel>(data);
+                    return model;
+                }
+            }
+            return default;
+        }
+
+        #endregion
+
+    }
+}
