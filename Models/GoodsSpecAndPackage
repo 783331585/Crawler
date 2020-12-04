@@ -1,0 +1,44 @@
+using System.Collections.Generic;
+
+namespace CX4.Crawler.Models
+{
+    /// <summary>
+    /// 商品规格与包装类
+    /// </summary>
+    public class GoodsSpecAndPackage
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public GoodsSpecAndPackage()
+        {
+            Attrs = new List<SpecAttr>();
+        }
+
+        /// <summary>
+        /// 属性分组名称
+        /// </summary>
+        public string GroupName { get; set; }
+
+        /// <summary>
+        ///
+        /// </summary>
+        public List<SpecAttr> Attrs { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public class SpecAttr
+        {
+            /// <summary>
+            /// 属性名称
+            /// </summary>
+            public string Name { get; set; }
+
+            /// <summary>
+            /// 属性值
+            /// </summary>
+            public string Value { get; set; }
+        }
+    }
+}
