@@ -1,0 +1,40 @@
+namespace CX4.Crawler.Models
+{
+    /// <summary>
+    /// 按图搜索京东图片商品类
+    /// </summary>
+    public class SearchJDImageGoods
+    {
+        private string picUrl;
+
+        /// <summary>
+        /// 商品ID
+        /// </summary>
+        public long GoodsID { get; set; }
+
+        /// <summary>
+        /// 商品名称
+        /// </summary>
+        public string GoodsName { get; set; }
+
+        /// <summary>
+        /// 商品地址
+        /// </summary>
+        public string GoodsUrl => $"https://item.jd.com/{GoodsID}.html";
+
+        /// <summary>
+        /// 商品图片地址
+        /// </summary>
+        public string ImageUrl
+        {
+            get { return picUrl; }
+            set
+            {
+                if (!value.StartsWith("https://") || !value.StartsWith("http://"))
+                {
+                    picUrl = "http:" + value;
+                }
+            }
+        }
+    }
+}
