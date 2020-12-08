@@ -1,0 +1,147 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+using CX4.Crawler.Models;
+
+namespace CX4.Crawler.JingDong
+{
+    /// <summary>
+    /// 京粉爬虫类
+    /// </summary>
+    /// <remarks>https://jingfenapp.jd.com</remarks>
+    public class JingFenCrawler : JDPCCrawler
+    {
+        #region const
+        private const string URL_API = "https://api.m.jd.com/";
+        #endregion
+
+        #region override
+        /// <summary>
+        /// 
+        /// </summary>
+        protected override string Referer => "https://jingfenapp.jd.com/";
+        #endregion
+
+        /// <summary>
+        /// 搜索商品
+        /// </summary>
+        /// <param name="goodsID"></param>
+        /// <returns></returns>
+        public JingFenSearchGoods SearchGoods(string goodsID)
+        {
+            string body = "?functionId=unionSearch&appid=u&client=wh5&clientVersion=1.1.0&body={\"funName\":\"search\",\"version\":\"v2\",\"param\":{\"pageNo\":1,\"pageSize\":20,\"keyWord\":\"" + goodsID + "\"}}";
+            string url = URL_API + body;
+            var response = HttpGet<JingFenSearchGoodsResponse>(url);
+            if (!response.Success)
+            {
+                throw new Exception($"请求网址:{url},返回信息:{response.message}");
+            }
+            if (response.data != null && response.data.skuPage != null && response.data.skuPage.result.Any(k => k.skuId == goodsID))
+            {
+                var item = response.data.skuPage.result.FirstOrDefault(k => k.skuId == goodsID);
+                return SetMapper(item);
+            }
+            return default;
+        }
+
+        #region 推荐商品
+
+        /// <summary>
+        /// 获取今日必推商品
+        /// </summary>
+        /// <param name="pageNo"></param>
+        /// <param name="hasNext">是否有下一页</param>
+        /// <returns></returns>
+        public List<JingFenSearchGoods> QueryTodayGoods(int pageNo, out bool hasNext)
+        {
+            return QueryRecommendGood(31, pageNo, out hasNext);
+        }
+
+        /// <summary>
+        /// 获取京东自营商品
+        /// </summary>
+        /// <param name="pageNo"></param>
+        /// <param name="hasNext">是否有下一页</param>
+        /// <returns></returns>
+        public List<JingFenSearchGoods> QueryOwnerGoods(int pageNo, out bool hasNext)
+        {
+            return QueryRecommendGood(41, pageNo, out hasNext);
+        }
+
+        /// <summary>
+        /// 获取高收益榜商品
+        /// </summary>
+        /// <param name="pageNo"></param>
+        ///  <param name="hasNext">是否有下一页</param>
+        /// <returns></returns>
+        public List<JingFenSearchGoods> QueryHighIncomeGoods(int pageNo, out bool hasNext)
+        {
+            return QueryRecommendGood(40, pageNo, out hasNext);
+        }
+
+        /// <summary>
+        /// 获取奖励商品
+        /// </summary>
+        /// <param name="pageNo"></param>
+        ///  <param name="hasNext">是否有下一页</param>
+        /// <returns></returns>
+        public List<JingFenSearchGoods> QueryRewardGoods(int pageNo, out bool hasNext)
+        {
+            return QueryRecommendGood(150, pageNo, out hasNext);
+        }
+
+        /// <summary>
+        /// 查询推荐
+        /// </summary>
+        /// <param name="recommendID">31:今日必推，41:京东自营，40:高收益榜，150:奖励商品</param>
+        /// <param name="pageNo"></param>
+        /// <param name="hasNext">是否有下一页</param>
+        /// <returns></returns>
+        private List<JingFenSearchGoods> QueryRecommendGood(int recommendID, int pageNo, out bool hasNext)
+        {
+            hasNext = false;
+            List<JingFenSearchGoods> list = new List<JingFenSearchGoods>();
+            string body = "?functionId=unionSearch&appid=u&client=wh5&clientVersion=1.1.0&body={\"funName\":\"querySearchInfoByEliteId\",\"param\":{\"pageNo\":" + pageNo + ",\"pageSize\":20,\"sortName\":null,\"eliteId\":" + recommendID + ",\"sort\":\"asc\",\"index\":\"0\"},\"source\":2}";
+            string url = URL_API + body;
+            var response = HttpGet<JingFenSearchGoodsResponse>(url);
+            if (!response.Success)
+            {
+                throw new Exception($"请求网址:{url},返回信息:{response.message}");
+            }
+            if (response.data != null && response.data.skuPage != null)
+            {
+                hasNext = response.data.skuPage.hasNext;
+                foreach (var item in response.data.skuPage.result)
+                {
+                    list.Add(SetMapper(item));
+                }
+            }
+            return list;
+        }
+        #endregion
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        private JingFenSearchGoods SetMapper(JingFenSearchGoodsResponse.Result model)
+        {
+            return new JingFenSearchGoods
+            {
+                GoodsID = model.skuId,
+                CommissionShare = model.commissionShare,
+                CouponAfterPrice = model.couponAfterPrice,
+                CouponNumber = model.remainCnt,
+                GoodComments = model.goodComments,
+                GoodsName = model.skuName,
+                GoodsUrl = model.skuUrl,
+                HasCoupon = model.hasCoupon,
+                Rebate = model.couponPrice,
+                Requirements = model.quota,
+                SalePrice = model.price
+            };
+        }
+    }
+}
