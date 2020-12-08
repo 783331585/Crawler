@@ -457,4 +457,130 @@ namespace CX4.Crawler.JingDong
         [JsonProperty("sku_id")]
         public string SkuID { get; set; }
     }
+    
+        /// <summary>
+    /// 京粉搜索商品类
+    /// </summary>
+    internal class JingFenSearchGoodsResponse
+    {
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public int code { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string message { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool Success => code == 200;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Data data { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public class Data
+        {
+            public SkuPage skuPage { get; set; }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public class SkuPage
+        {
+            /// <summary>
+            /// 
+            /// </summary>
+            public SkuPage()
+            {
+                result = new List<Result>();
+            }
+
+            /// <summary>
+            /// 是否有下页
+            /// </summary>
+            public bool hasNext { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public List<Result> result { get; set; }
+
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public class Result
+        {
+            /// <summary>
+            /// 
+            /// </summary>
+            public string skuId { get; set; }
+
+            /// <summary>
+            /// 商品名称
+            /// </summary>
+            public string skuName { get; set; }
+
+            /// <summary>
+            /// 好评量
+            /// </summary>
+            public int goodComments { get; set; }
+
+            /// <summary>
+            /// 佣金比例
+            /// </summary>
+            public decimal commissionShare { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public int isPinGou { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public decimal couponAfterPrice { get; set; }
+
+            /// <summary>
+            /// 售价
+            /// </summary>
+            public decimal price { get; set; }
+
+            /// <summary>
+            /// 是否有优惠券
+            /// </summary>
+            public bool hasCoupon { get; set; }
+
+            /// <summary>
+            /// 面值
+            /// </summary>
+            public decimal couponPrice { get; set; }
+
+            /// <summary>
+            /// 限制金额
+            /// </summary>
+            public decimal quota { get; set; }
+
+            /// <summary>
+            /// 优惠券数量
+            /// </summary>
+            public int remainCnt { get; set; }
+
+            /// <summary>
+            /// 购物网址
+            /// </summary>
+            public string skuUrl { get { return $"https://item.jd.com/{skuId}.html"; } }
+        }
+    }
 }
